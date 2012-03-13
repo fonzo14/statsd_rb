@@ -12,7 +12,7 @@ module Statsd
       }
     end
 
-    def self.run!(opts = {})
+    def self.run(opts = {})
       config = self.default_config.merge(opts)
 
       EM::run do

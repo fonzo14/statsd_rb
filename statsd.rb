@@ -6,7 +6,7 @@ require 'statsd'
 # If we are being run directly, fire off the server
 #
 if __FILE__ == $0
-  Statsd::Runner.run!({ :debug => false })
+  Statsd::Runner.run({ :debug => false })
 end
 
 __END__
