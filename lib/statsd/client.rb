@@ -3,18 +3,14 @@
 #
 
 require 'socket'
+require 'timeout'
 
 module Statsd
   class Client
-    class << self
-      @@host = '127.0.0.1'
-      @@port = 8125
 
-      def configure(host, port)
-        @@host = host
-        @@port = port
-
-        true
+      def initialize(host = '127.0.0.1', port = 8125)
+        @host = host
+        @port = port
       end
 
       ##
@@ -90,13 +86,22 @@ module Statsd
         begin
           s = UDPSocket.new
           sampled_data.each_pair do |stat, value|
-            s.send("#{stat}:#{value}", 0, @@host, @@port)
+            s.send("#{stat}:#{value}", 0, @host, @port)
           end
         rescue
           # safe to ignore issues
         end
       end
+      
+      def stat(name)
+        begin
+          s = UDPSocket.new
+          s.send("stat:#{name}", 0, @host, @port)            
+          p s.recv_nonblock(100)
+        rescue
+          # safe to ignore issues
+        end
+      end
 
-    end
   end
 end

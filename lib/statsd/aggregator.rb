@@ -1,21 +1,46 @@
 module Statsd
   module Aggregator
 
-    def aggregate!
-      stat_string = ''
-      ts          = $TESTING ? 0 : Time.new.to_i
-      num_stats   = 0
+    def aggregate!(stat)
+      ts                = $TESTING ? 0 : Time.new.to_i
+      previous_ts       = @timestamps[stat]
+      @timestamps[stat] = ts
 
+      stat = aggregate_counter!(stat,@counters[stat],ts,previous_ts) if @counters.key?(stat)
+      stat = aggregate_timer!(stat,@timers[stat],ts,previous_ts)     if @timers.key?(stat)        
+
+      stat
+    end
+    
+    def purge!
+      ts = Time.new.to_i
       @counters.each do |k,v|
-        val = v / (@config[:flush_interval])
-        stat_string << "stats.%s %s %d\n"        % [ k, val, ts ]
-        stat_string << "stats_counts.%s %s %d\n" % [ k, v, ts ]
-
-        @counters[k] = 0
-        num_stats   += 1
+        previous_ts  = @timestamps[k]
+        @counters[k] = 0 if (previous_ts.nil? || (ts - previous_ts > @config[:threshold_purge]))
       end
-
       @timers.each do |k,v|
+        previous_ts = @timestamps[k]
+        @timers[k]  = [] if (previous_ts.nil? || (ts - previous_ts > @config[:threshold_purge]))
+      end
+    end
+    
+    private
+    def aggregate_counter!(k,v,ts,previous_ts)
+      stat         = nil
+      @counters[k] = 0
+      
+      if previous_ts
+        val = v / (ts - previous_ts)
+        stat = ['c',val,v.to_i,ts].join('|')
+      end
+      stat
+    end
+    
+    def aggregate_timer!(k,v,ts,previous_ts)
+      stat       = nil
+      @timers[k] = []
+      
+      if previous_ts
         pct_thresh  = @config[:threshold_pct]
         values      = v.sort { |a,b| a-b }
         min         = values.first
@@ -35,24 +60,13 @@ module Statsd
           mean = values.reduce(0, :+) / num_in_thresh
         end
 
-        @timers[k] = []
+        count = values.length
 
-        stat_string << [
-          "stats.timers.%s.mean %s %d\n"      % [ k, mean, ts ],
-          "stats.timers.%s.upper %s %d\n"     % [ k, max, ts ],
-          "stats.timers.%s.upper_%d %s %d\n"  % [ k, pct_thresh, max_at_thresh, ts ],
-          "stats.timers.%s.lower %s %d\n"     % [ k, min, ts ],
-          "stats.timers.%s.count %s %d\n"     % [ k, values.length, ts ],
-        ].join('')
-
-        num_stats += 1
+        stat = ['t',mean,max,max_at_thresh,min,count.to_i,count.to_f / (ts - previous_ts),ts].join('|')
       end
-
-      stat_string << "statsd.numStats %d %d\n" % [ num_stats, ts ]
-      $stderr.puts stat_string if (@config[:debug])
-
-      stat_string
+      stat
     end
+    
   end
 
 end
