@@ -3,7 +3,6 @@
 #
 
 require 'socket'
-require 'timeout'
 
 module Statsd
   class Client
