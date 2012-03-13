@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.add_dependency 'eventmachine', ['>= 1.0.0.beta.3']
   
   s.add_dependency(%q<rcov>, [">= 0"])
-  s.add_dependency(%q<rspec>, ["~> 2.3.0"])
-  s.add_dependency(%q<yard>, ["~> 0.6.0"])
+  s.add_dependency(%q<rspec>, [">= 2.3.0"])
+  s.add_dependency(%q<yard>, [">= 0.6.0"])
   
   s.authors       = ["fonzo14"]
   s.require_paths = ["lib"]
